@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thread Pool Monitor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .form-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 120px; }
+    </style>
+</head>
+<body>
+    <h1>Thread Pool Monitor</h1>
+    
+    <h2>Live Metrics</h2>
+    <table id="metricsTable">
+        <thead>
+            <tr>
+                <th>Pool Name</th>
+                <th>Core Size</th>
+                <th>Max Size</th>
+                <th>Active Threads</th>
+                <th>Pool Size</th>
+                <th>Queue Size</th>
+                <th>Completed Tasks</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <div style="display: flex; gap: 20px;">
+        <div>
+            <h2>Create Pool</h2>
+            <div class="form-group">
+                <label>Name:</label> <input type="text" id="poolName">
+            </div>
+            <div class="form-group">
+                <label>Core Size:</label> <input type="number" id="coreSize" value="2">
+            </div>
+            <div class="form-group">
+                <label>Max Size:</label> <input type="number" id="maxSize" value="4">
+            </div>
+            <div class="form-group">
+                <label>Queue Capacity:</label> <input type="number" id="queueCap" value="100">
+            </div>
+            <button onclick="createPool()">Create</button>
+        </div>
+
+        <div>
+            <h2>Submit Tasks</h2>
+            <div class="form-group">
+                <label>Pool:</label> <input type="text" id="taskPoolName">
+            </div>
+            <div class="form-group">
+                <label>Type:</label> 
+                <select id="taskType">
+                    <option value="SLEEP">SLEEP</option>
+                    <option value="CPU_BOUND">CPU_BOUND</option>
+                    <option value="IO_BOUND">IO_BOUND</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Duration (ms):</label> <input type="number" id="taskDuration" value="500">
+            </div>
+            <div class="form-group">
+                <label>Count:</label> <input type="number" id="taskCount" value="10">
+            </div>
+            <button onclick="submitTasks()">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket("ws://" + location.host + "/ws/metrics");
+        ws.onmessage = function(event) {
+            const metrics = JSON.parse(event.data);
+            const tbody = document.querySelector("#metricsTable tbody");
+            tbody.innerHTML = "";
+            metrics.forEach(m => {
+                const tr = document.createElement("tr");
+                const status = m.isTerminated ? "TERMINATED" : (m.isShutdown ? "SHUTDOWN" : "RUNNING");
+                tr.innerHTML = `
+                    <td>${m.poolName}</td>
+                    <td>${m.corePoolSize}</td>
+                    <td>${m.maxPoolSize}</td>
+                    <td>${m.activeCount}</td>
+                    <td>${m.poolSize}</td>
+                    <td>${m.queueSize}</td>
+                    <td>${m.completedTaskCount}</td>
+                    <td>${status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        async function createPool() {
+            const req = {
+                name: document.getElementById('poolName').value,
+                coreSize: parseInt(document.getElementById('coreSize').value),
+                maxSize: parseInt(document.getElementById('maxSize').value),
+                queueCapacity: parseInt(document.getElementById('queueCap').value),
+                description: "Custom pool"
+            };
+            await fetch('/api/v1/pools', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(req)
+            });
+            alert('Pool created');
+        }
+
+        async function submitTasks() {
+            const poolName = document.getElementById('taskPoolName').value;
+            const req = {
+                taskType: document.getElementById('taskType').value,
+                durationMs: parseInt(document.getElementById('taskDuration').value),
+                count: parseInt(document.getElementById('taskCount').value)
+            };
+            await fetch('/api/v1/pools/' + poolName + '/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(req)
+            });
+            alert('Tasks submitted');
+        }
+    </script>
+</body>
+</html>

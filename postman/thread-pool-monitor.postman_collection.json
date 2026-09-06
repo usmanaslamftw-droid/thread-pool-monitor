@@ -1,0 +1,28 @@
+{
+    "info": {
+        "name": "Thread Pool Monitor",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Get Pools",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8082/api/v1/pools",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8082",
+                    "path": [
+                        "api",
+                        "v1",
+                        "pools"
+                    ]
+                }
+            }
+        }
+    ]
+}
